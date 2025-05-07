@@ -26,6 +26,7 @@ az deployment group create \
 ACR_NAME="${resource_name}acr"
 az acr build -r $ACR_NAME -t "modelinit:latest" apps/initJob
 az acr build -r "${resource_name}acr" -t "inferenceapp:latest" apps/inferenceApp
+az acr build -r "${resource_name}acr" -t "azcopy:latest" apps/azcopy
 
 # Prompt user for their HuggingFace Token
 read -p "Please provide a HuggingFace token to download the model: " HF_TOKEN
@@ -37,4 +38,8 @@ az deployment group create \
   --parameters jobName="initjob" containerAppEnvName="$resource_name" huggingFaceToken="$HF_TOKEN" registry=$ACR_NAME userAssignedIdentityName="${resource_name}-identity"
 az containerapp job start -n initjob -g $resource_group_name
 
-# Deploy the containerized application
+# Deploy the inference application with azcopy as an init container
+az deployment group create \
+  --resource-group "$resource_group_name" \
+  --template-file ./apps/inferenceApp/inferenceApp.bicep \
+  --parameters appName="inferenceapp" containerAppEnvName="$resource_name" storageAccountName="${resource_name}sa" registry=$ACR_NAME userAssignedIdentityName="${resource_name}-identity"
