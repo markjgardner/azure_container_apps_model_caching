@@ -1,11 +1,8 @@
-@description('Name of the Azure Container App')
-param containerAppName string
-
 @description('Location for all resources')
 param location string = resourceGroup().location
 
 @description('Name of the storage account')
-param storageAccountName string
+param storageAccountName string = '${containerAppEnvName}sa'
 
 @description('Name of the Container Apps environment')
 param containerAppEnvName string
@@ -15,6 +12,9 @@ param logAnalyticsWorkspaceName string = '${containerAppEnvName}-law'
 
 @description('SKU of the Log Analytics workspace')
 param logAnalyticsSku string = 'PerGB2018'
+
+@description('Name of the Azure Container Registry')
+param acrName string = '${containerAppEnvName}acr'
 
 // Create a storage account
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
@@ -63,6 +63,28 @@ resource containerAppEnv 'Microsoft.App/managedEnvironments@2023-05-01' = {
         sharedKey: logAnalyticsWorkspace.listKeys().primarySharedKey
       }
     }
+    workloadProfiles: [
+      {
+        name: 'gpu-a100'
+        workloadProfileType: 'Consumption-GPU-NC24-A100'
+      }
+      {
+        name: 'Consumption'
+        workloadProfileType: 'Consumption'
+      }
+    ]
+  }
+}
+
+// Create an Azure Container Registry with artifact streaming enabled
+resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
+  name: acrName
+  location: location
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    policies: {}
   }
 }
 
@@ -75,49 +97,23 @@ resource volume 'Microsoft.App/managedEnvironments/storages@2023-05-01' = {
       accountName: storageAccount.name
       accountKey: listKeys(storageAccount.id, '2022-09-01').keys[0].value
       shareName: fileShare.name
-      accessMode: 'ReadOnly'
+      accessMode: 'ReadWrite'
     }
   }
 }
 
-// Create the Azure Container App
-resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
-  name: containerAppName
+// Create a user-assigned managed identity
+resource userAssignedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: '${containerAppEnvName}-identity'
   location: location
-  dependsOn: [
-    volume
-  ]
+}
+
+// Assign AcrPull role to the managed identity on the ACR
+resource acrPullRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: guid(acr.id, userAssignedIdentity.id, 'AcrPull')
+  scope: acr
   properties: {
-    managedEnvironmentId: containerAppEnv.id
-    configuration: {
-      activeRevisionsMode: 'Multiple'
-    }
-    template: {
-      containers: [
-        {
-          name: containerAppName
-          image: 'mcr.microsoft.com/azure-cli:latest'
-          command: [
-            '/bin/sh', '-c'
-          ]
-          args: [
-            'ls /mnt/models && sleep infinity'
-          ]
-          volumeMounts: [
-            {
-              volumeName: 'models'
-              mountPath: '/mnt/models'
-            }
-          ]
-        }
-      ]
-      volumes: [
-        {
-          name: 'models'
-          storageType: 'AzureFile'
-          storageName: 'models'
-        }
-      ]
-    }
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull role
+    principalId: userAssignedIdentity.properties.principalId
   }
 }
