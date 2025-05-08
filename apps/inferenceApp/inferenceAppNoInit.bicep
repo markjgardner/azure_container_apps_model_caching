@@ -50,29 +50,13 @@ resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
     template: {
       containers: [
         {
-          name: 'app'
-          image: '${registry}.azurecr.io/inferenceapp:latest'
-          resources: {
-            cpu: 4
-            memory: '8Gi'
-          }
-          volumeMounts: [
-            {
-              volumeName: 'localmodels'
-              mountPath: '/mnt/models'
-            }
-          ]
-        }
-      ]
-      initContainers: [
-        {
           name: 'download-models'
           image: '${registry}.azurecr.io/azcopy:latest'
           command: [
             '/bin/bash', '-c'
           ]
           args: [
-            'echo "Stopwatch-Start: $(date)" && azcopy copy "$SOURCE?$TOKEN" "/mnt/local" --recursive && echo "Stopwatch-Stop: $(date)"'
+            'echo "Stopwatch-Start: $(date)" && azcopy copy "$SOURCE?$TOKEN" "/mnt/local" --recursive && echo "Stopwatch-Stop: $(date)" && tail -f /dev/null'
           ]
           resources: {
             cpu: 4
