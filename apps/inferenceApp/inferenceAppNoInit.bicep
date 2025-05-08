@@ -24,14 +24,14 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2024-01-01' existing 
   name: storageAccountName
 }
 
-resource fileService 'Microsoft.Storage/storageAccounts/fileServices@2022-09-01' existing = {
-  parent: storageAccount
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2024-01-01' existing = {
   name: 'default'
+  parent: storageAccount
 }
 
-resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2022-09-01' existing = {
-  parent: fileService
+resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2024-01-01' existing = {
   name: 'models'
+  parent: blobService 
 }
 
 resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
@@ -65,11 +65,11 @@ resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
           env: [
             {
               name: 'SOURCE'
-              value: 'https://${storageAccount.name}.file.core.windows.net/${fileShare.name}'
+              value: 'https://${storageAccount.name}.blob.core.windows.net/${blobContainer.name}'
             }
             {
               name: 'TOKEN'
-              value: storageAccount.listAccountSas('2024-01-01', {signedServices: 'f', signedResourceTypes: 'sco', signedPermission: 'rl', signedExpiry: '2025-12-31T23:59:59Z', signedProtocol: 'https'}).accountSasToken
+              value: storageAccount.listAccountSas('2024-01-01', {signedServices: 'b', signedResourceTypes: 'sco', signedPermission: 'rl', signedExpiry: '2025-12-31T23:59:59Z', signedProtocol: 'https'}).accountSasToken
               
             }
           ]
