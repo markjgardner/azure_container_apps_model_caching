@@ -59,8 +59,8 @@ resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
             'echo "Stopwatch-Start: $(date)" && azcopy copy "$SOURCE?$TOKEN" "/mnt/local" --recursive && echo "Stopwatch-Stop: $(date)" && tail -f /dev/null'
           ]
           resources: {
-            cpu: 4
-            memory: '8Gi'
+            cpu: 24
+            memory: '220Gi'
           }
           env: [
             {
