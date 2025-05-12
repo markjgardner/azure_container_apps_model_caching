@@ -24,14 +24,14 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2024-01-01' existing 
   name: storageAccountName
 }
 
-resource fileService 'Microsoft.Storage/storageAccounts/fileServices@2022-09-01' existing = {
-  parent: storageAccount
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2024-01-01' existing = {
   name: 'default'
+  parent: storageAccount
 }
 
-resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2022-09-01' existing = {
-  parent: fileService
+resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2024-01-01' existing = {
   name: 'models'
+  parent: blobService 
 }
 
 resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
@@ -53,8 +53,8 @@ resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
           name: 'app'
           image: '${registry}.azurecr.io/inferenceapp:latest'
           resources: {
-            cpu: 4
-            memory: '8Gi'
+            cpu: 24
+            memory: '220Gi'
           }
           volumeMounts: [
             {
@@ -75,13 +75,13 @@ resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
             'echo "Stopwatch-Start: $(date)" && azcopy copy "$SOURCE?$TOKEN" "/mnt/local" --recursive && echo "Stopwatch-Stop: $(date)"'
           ]
           resources: {
-            cpu: 4
-            memory: '8Gi'
+            cpu: 24
+            memory: '220Gi'
           }
           env: [
             {
               name: 'SOURCE'
-              value: 'https://${storageAccount.name}.file.core.windows.net/${fileShare.name}'
+              value: 'https://${storageAccount.name}.blob.core.windows.net/${blobContainer.name}'
             }
             {
               name: 'TOKEN'

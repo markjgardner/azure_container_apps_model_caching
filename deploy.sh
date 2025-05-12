@@ -35,11 +35,11 @@ read -p "Please provide a HuggingFace token to download the model: " HF_TOKEN
 az deployment group create \
   --resource-group "$resource_group_name" \
   --template-file ./apps/initJob/modelInitJob.bicep \
-  --parameters jobName="initjob" containerAppEnvName="$resource_name" huggingFaceToken="$HF_TOKEN" registry=$ACR_NAME userAssignedIdentityName="${resource_name}-identity"
-az containerapp job start -n initjob -g $resource_group_name
+  --parameters jobName="blobinitjob" containerAppEnvName="$resource_name" huggingFaceToken="$HF_TOKEN" registry=$ACR_NAME userAssignedIdentityName="${resource_name}-identity" storageAccountName="${resource_name}sa"
+az containerapp job start -n blobinitjob -g $resource_group_name
 
 # Deploy the inference application with azcopy as an init container
 az deployment group create \
   --resource-group "$resource_group_name" \
-  --template-file ./apps/inferenceApp/inferenceApp.bicep \
-  --parameters appName="inferenceapp" containerAppEnvName="$resource_name" storageAccountName="${resource_name}sa" registry=$ACR_NAME userAssignedIdentityName="${resource_name}-identity"
+  --template-file ./apps/inferenceApp/inferenceAppNoInit.bicep \
+  --parameters appName="inferenceappnoinit" containerAppEnvName="$resource_name" storageAccountName="${resource_name}sa" registry=$ACR_NAME userAssignedIdentityName="${resource_name}-identity"
